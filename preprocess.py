@@ -78,15 +78,35 @@ def read_dem_files():
         pat_lines = []
         for i in range(len(lines)):
             if lines[i][0:5] == "*PAR:" or (lines[i][0:1] == "\t" and lines[i-1][0:5] == "*PAR:"):
-                line = lines[i].split()
-                if line[0] == "*PAR:":
-                    
-                    if len(line[-1]) > 10 and (line[-1][2] in ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"]):
-                        new_line = line[1:-1]
-                    else:
-                        new_line = line[1:]
-                else:
-                    new_line = line[:-1]
+                line = lines[i]
+                # line, sep, tail = line.partition(' .')
+                # line = line + sep
+                # line, sep, tail = line.partition(' ?')
+                # line = line + sep
+                # line = line.split(" . ", 1)[0]
+                # line = line.replace("(", "")
+                # line = line.replace(")", "")
+                line = line.replace(":", "")
+                line = line.replace("+", "")
+                # line = line.replace("[", "")
+                # line = line.replace("]", "")
+                line = line.replace("\\", "")
+            
+                new_line = line.split()
+                # print(new_line)
+                # print(lines[i+1])
+                if lines[i][0:5] == "*PAR:":
+                    new_line = new_line[1:]
+                if (i+1 < len(lines)) and ((lines[i+1][0:5] == "%mor:") or (lines[i+1][0:5] == "*PAR:")):
+                    new_line = new_line[0:-1]
+                elif (len(new_line[-1]) > 6) and ((new_line[-1][0:4] == "\x15") or (new_line[-1][0:3] == "\\u") or (new_line[-1][4].isdigit()) or (new_line[-1][0] == "_")):
+                    new_line = new_line[0:-1]
+                
+
+                space =" "
+                new_line = space.join(new_line)
+                new_line = new_line.replace("_", " ")
+                new_line = new_line.split()
                 end_line = []
                 for word in new_line:
                     if word !="[+":
@@ -163,21 +183,41 @@ cookie_control/086-0.cha  cookie_control/140-3.cha  cookie_control/243-0.cha"""
     files = con_files.split()
     cons = []
     for file in files:
-        cha_file = open(file, 'r')
+        cha_file = open(file, encoding="utf-8")
+        # f = open(fname, encoding="latin-1"))
         lines = cha_file.readlines()
         
         pat_lines = []
         for i in range(len(lines)):
             if lines[i][0:5] == "*PAR:" or (lines[i][0:1] == "\t" and lines[i-1][0:5] == "*PAR:"):
-                line = lines[i].split()
-                if line[0] == "*PAR:":
-                    
-                    if len(line[-1]) > 7 and (line[-1][4] in ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"]):
-                        new_line = line[1:-1]
-                    else:
-                        new_line = line[1:]
-                else:
-                    new_line = line[:-1]
+                line = lines[i]
+                # line, sep, tail = line.partition(' .')
+                # line = line + sep
+                # line, sep, tail = line.partition(' ?')
+                # line = line + sep
+                # line = line.split(" . ", 1)[0]
+                # line = line.replace("(", "")
+                # line = line.replace(")", "")
+                line = line.replace(":", "")
+                line = line.replace("+", "")
+                # line = line.replace("[", "")
+                # line = line.replace("]", "")
+                line = line.replace("\\", "")
+            
+                new_line = line.split()
+               
+                if lines[i][0:5] == "*PAR:":
+                    new_line = new_line[1:]
+                if (i+1 < len(lines)) and ((lines[i+1][0:5] == "%mor:") or (lines[i+1][0:5] == "*PAR:")):
+                    new_line = new_line[0:-1]
+                elif (len(new_line[-1]) > 6) and ((new_line[-1][0:4] == "\x15") or ("0" in new_line[-1]) or (new_line[-1][0:3] == "\\u") or (new_line[-1][4].isdigit()) or (new_line[-1][0] == "_")):
+                    new_line = new_line[0:-1]
+                
+
+                space =" "
+                new_line = space.join(new_line)
+                new_line = new_line.replace("_", " ")
+                new_line = new_line.split()
                 end_line = []
                 for word in new_line:
                     if word !="[+":
@@ -192,6 +232,8 @@ cookie_control/086-0.cha  cookie_control/140-3.cha  cookie_control/243-0.cha"""
 def split_word(word):
     split_list = []
     end_car = False
+    if word.isdigit():
+        return["<NUM>"]
     if word[0] == "<":
         split_list.append("<")
         word = word[1:]
@@ -210,6 +252,8 @@ def split_word(word):
     if word[-5:] == "in(g)":
         word = word[:-5] + "ing"
 
+   
+
     # if word[-2:] == "'s":
     #     split_list.append(word[:-2])
     #     word = word[:-2]
@@ -221,8 +265,8 @@ def split_word(word):
     # elif word[-1] == "s":
     #     split_list.append(word[:-1])
     #     split_list.append("_s")
-
-    split_list.append(word)
+    if not word.isdigit():
+        split_list.append(word)
     if end_car:
         split_list.append(">")
 
@@ -248,7 +292,7 @@ def main():
     trunc_type = 'post'
 
     # Tokenize our training data
-    tokenizer = tf.keras.preprocessing.text.Tokenizer(num_words=num_words, oov_token=oov_token, filters="_")
+    tokenizer = tf.keras.preprocessing.text.Tokenizer(num_words=num_words, oov_token=oov_token)
     tokenizer.fit_on_texts(dems_train)
 
     # Get our training data word index
