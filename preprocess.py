@@ -121,6 +121,12 @@ def parse_lines(lines):
 
 
 def get_data():
+    """
+    This method creates data ready for the model. It gets all the patient lines from the files, tokenizes the data and UNKs using keras text preprocessing, and pads the sequences with -1 so each line is the same length using keras sequence preprocessing. Lastly, creates the labels and combines the dementia and control data into one array.
+
+    :param: None
+    :return: numpy array of data ids, numpy array of corresponding labels, vocab dictionary
+    """
     # get the patient lines from the dementia files and control files
     dems = read_dem_files()
     cons = read_con_files()
@@ -136,7 +142,7 @@ def get_data():
 
     # Get our vocab dictionary
     vocab_dict = tokenizer.word_index
-    print(vocab_dict)
+
     # Get max sequence length
     dems_maxlen = max([len(x) for x in dems_sequences])
     cons_maxlen = max([len(x) for x in cons_sequences])
@@ -144,7 +150,6 @@ def get_data():
 
     # Pad the dem sequences
     dems_padded = pad_sequences(dems_sequences, padding='post', truncating='post', maxlen=maxlen, value=-1)
-
     # Pad the con sequences
     cons_padded = pad_sequences(cons_sequences, padding='post', truncating='post', maxlen=maxlen, value=-1)
 
