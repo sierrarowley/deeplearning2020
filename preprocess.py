@@ -89,14 +89,10 @@ def parse_lines(lines):
         if lines[i][0:5] == "*PAR:" or (lines[i][0:1] == "\t" and lines[i-1][0:5] == "*PAR:"):
             line = lines[i]
             # remove unwanted characters from the words
-            unwanted_characters = [":", "+", "\\"]
+            unwanted_characters = ["*PAR", ":", "+", "\\"]
             for ch in unwanted_characters:
                 line = line.replace(ch, "")
             new_line = line.split()
-
-            # remove *PAR: from the beginning of string
-            if lines[i][0:5] == "*PAR:":
-                new_line = new_line[1:]
 
             # since pat lines end with a timestamp and pat lines can take up multiple lines, check if line is last of pat lines and remove time stamp from the string
             if (i+1 < len(lines)) and ((lines[i+1][0:5] == "%mor:") or (lines[i+1][0:5] == "*PAR:")):
@@ -140,7 +136,7 @@ def get_data():
 
     # Get our vocab dictionary
     vocab_dict = tokenizer.word_index
-
+    print(vocab_dict)
     # Get max sequence length
     dems_maxlen = max([len(x) for x in dems_sequences])
     cons_maxlen = max([len(x) for x in cons_sequences])
