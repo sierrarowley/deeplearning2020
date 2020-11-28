@@ -114,7 +114,7 @@ def parse_lines(lines):
             end_line = []
             for word in new_line:
                 if word != "[+":
-                    end_line += split_word(word)
+                    end_line += split_word(word) 
             # add parsed line to full list of patient lines
             pat_lines += end_line
     return pat_lines
@@ -130,15 +130,18 @@ def get_data():
     # get the patient lines from the dementia files and control files
     dems = read_dem_files()
     cons = read_con_files()
+    print('dems', dems[0:10])
 
     # Tokenize our data
-    tokenizer = tf.keras.preprocessing.text.Tokenizer(num_words=1780, oov_token='<UNK>')
+    tokenizer = tf.keras.preprocessing.text.Tokenizer(
+        num_words=1780, oov_token='<UNK>')
     tokenizer.fit_on_texts(dems)
     tokenizer.fit_on_texts(cons)
 
     # Encode data sentences into sequences
     dems_sequences = tokenizer.texts_to_sequences(dems)
     cons_sequences = tokenizer.texts_to_sequences(cons)
+    print('tokenized dems', dems_sequences[0:10])
 
     # Get our vocab dictionary
     vocab_dict = tokenizer.word_index
@@ -149,9 +152,11 @@ def get_data():
     maxlen = max(dems_maxlen, cons_maxlen)
 
     # Pad the dem sequences
-    dems_padded = pad_sequences(dems_sequences, padding='post', truncating='post', maxlen=maxlen, value=-1)
+    dems_padded = pad_sequences(
+        dems_sequences, padding='post', truncating='post', maxlen=maxlen, value=-1)
     # Pad the con sequences
-    cons_padded = pad_sequences(cons_sequences, padding='post', truncating='post', maxlen=maxlen, value=-1)
+    cons_padded = pad_sequences(
+        cons_sequences, padding='post', truncating='post', maxlen=maxlen, value=-1)
 
     # create the labels
     dem_labels = np.full((dems_padded.shape[0]), 1)
@@ -161,6 +166,7 @@ def get_data():
     labels = np.concatenate((dem_labels, con_labels), axis=0)
     # shuffle so that dementia and control patients are mixed
     total = np.concatenate((data_ids, np.expand_dims(labels, axis=1)), axis=1)
+    print('ids', data_ids)
     np.random.shuffle(total)
 
     # return data ids, labels, and vocab dictionary
