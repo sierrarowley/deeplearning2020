@@ -72,34 +72,34 @@ def split_word(word):
         word = word[:-1]
         end_car = True
         
-    # conj = None
+    conj = None
     # if word[-5:] == "in(g)":
     #     conj = "ing"
     #     word = word[:-5] 
 
-    # if word[-3:] == "ing":
-    #     conj = "ing"
-    #     word = word[:-3] 
+    if word[-3:] == "ing":
+        conj = "ing"
+        word = word[:-3] 
         
-    # if word[-2:] == "ed":
-    #     conj = "ed"
-    #     word = word[:-2] 
+    if word[-2:] == "ed":
+        conj = "ed"
+        word = word[:-2] 
 
-    # poss = None
-    # if word[-2:] == "'s":
-    #     poss = "'s"
-    #     word = word[:-2]
+    poss = None
+    if word[-2:] == "'s":
+        poss = "'s"
+        word = word[:-2]
 
 
     # add rest of word to list after splitting
     split_list.append(word)
 
 
-    # if conj != None:
-    #     split_list.append(conj)
+    if conj != None:
+        split_list.append(conj)
 
-    # if poss != None:
-    #     split_list.append(poss)
+    if poss != None:
+        split_list.append(poss)
 
     # if par:
     #     split_list.append("()")
@@ -124,7 +124,7 @@ def parse_lines(lines):
         if lines[i][0:5] == "*PAR:" or (lines[i][0:1] == "\t" and lines[i-1][0:5] == "*PAR:"):
             line = lines[i]
             # remove unwanted characters from the words
-            unwanted_characters = ["*PAR", ":", "+", "\\"]
+            unwanted_characters = ["*PAR", ":", "+", "@", "(", ")", "]"]
             for ch in unwanted_characters:
                 line = line.replace(ch, "")
             new_line = line.split()
@@ -165,7 +165,7 @@ def get_data():
     # get the patient lines from the dementia files and control files
     dems = read_dem_files()
     cons = read_con_files()
-    print('dems', dems[0:10])
+    # print('dems', dems[0:10])
 
     # Tokenize our data
     tokenizer = tf.keras.preprocessing.text.Tokenizer(
@@ -176,10 +176,15 @@ def get_data():
     # Encode data sentences into sequences
     dems_sequences = tokenizer.texts_to_sequences(dems)
     cons_sequences = tokenizer.texts_to_sequences(cons)
-    print('tokenized dems', dems_sequences[0:10])
+    # print('tokenized dems', dems_sequences[0:10])
 
     # Get our vocab dictionary
     vocab_dict = tokenizer.word_index
+<<<<<<< HEAD
+=======
+    # print('diction', vocab_dict['the'])
+    print(vocab_dict)
+>>>>>>> f0f7a82... ushas tuning
 
     # Get max sequence length
     dems_maxlen = max([len(x) for x in dems_sequences])
@@ -201,7 +206,7 @@ def get_data():
     labels = np.concatenate((dem_labels, con_labels), axis=0)
     # shuffle so that dementia and control patients are mixed
     total = np.concatenate((data_ids, np.expand_dims(labels, axis=1)), axis=1)
-    print('ids', data_ids)
+    # print('ids', data_ids)
     np.random.shuffle(total)
 
     # return data ids, labels, and vocab dictionary
