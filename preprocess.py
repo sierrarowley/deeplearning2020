@@ -71,19 +71,19 @@ def split_word(word):
     if word[-1] == ">":
         word = word[:-1]
         end_car = True
-        
+
     conj = None
     # if word[-5:] == "in(g)":
     #     conj = "ing"
-    #     word = word[:-5] 
+    #     word = word[:-5]
 
     if word[-3:] == "ing":
         conj = "ing"
-        word = word[:-3] 
-        
+        word = word[:-3]
+
     if word[-2:] == "ed":
         conj = "ed"
-        word = word[:-2] 
+        word = word[:-2]
 
     poss = None
     if word[-2:] == "'s":
@@ -104,7 +104,7 @@ def split_word(word):
     # if par:
     #     split_list.append("()")
 
-    
+
     # add end carrot to end of list
     if end_car:
         split_list.append(">")
@@ -149,7 +149,7 @@ def parse_lines(lines):
             end_line = []
             for word in new_line:
                 if word != "[+":
-                    end_line += split_word(word) 
+                    end_line += split_word(word)
             # add parsed line to full list of patient lines
             pat_lines += end_line
     return pat_lines
@@ -165,7 +165,6 @@ def get_data():
     # get the patient lines from the dementia files and control files
     dems = read_dem_files()
     cons = read_con_files()
-    # print('dems', dems[0:10])
 
     # Tokenize our data
     tokenizer = tf.keras.preprocessing.text.Tokenizer(
@@ -180,11 +179,6 @@ def get_data():
 
     # Get our vocab dictionary
     vocab_dict = tokenizer.word_index
-<<<<<<< HEAD
-=======
-    # print('diction', vocab_dict['the'])
-    print(vocab_dict)
->>>>>>> f0f7a82... ushas tuning
 
     # Get max sequence length
     dems_maxlen = max([len(x) for x in dems_sequences])

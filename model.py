@@ -1,114 +1,118 @@
 import numpy as np
 import tensorflow as tf
 from preprocess import get_data
-
-from keras.models import Sequential
-from keras.layers import Bidirectional
-from keras.layers import Dense
-from keras.layers.recurrent import GRU
+from embedding import glove_data, train_embedding, glove_embedding
 
 
-def build_model():
-<<<<<<< HEAD
-    model = keras.Sequential()
-    model.add(layers.Embedding(input_dim=1000, output_dim=64))
-    # The output of GRU will be a 3D tensor of shape (batch_size, timesteps, 128)
-    model.add(Bidirectional(layers.GRU(128, return_sequences=True)))
-    model.add(Dense(1))
-    model.add(Activation('softmax'))
-    model.compile(loss='categorical_crossentropy', optimizer='adam')
-=======
-    """Since the output of the AD Assessment Engine was activated by a sigmoid function, it ranges from 0 to 1 and could be treated as a probability. 
-    The corresponding label for each output was thus 0 for subjects without AD and 1 for subjects with AD. The loss function was defined as the cross 
-    entropy sum between the out- put and the label of all training samples in a batch. 
-    BPTT is carried out using Adam with a learning rate of 0.001 as the optimizer. The batch size is set to 16 throughout the whole training process. 
+def build_model(embedding_layer):
+    """Since the output of the AD Assessment Engine was activated by a sigmoid function, it ranges from 0 to 1 and could be treated as a probability.
+    The corresponding label for each output was thus 0 for subjects without AD and 1 for subjects with AD. The loss function was defined as the cross
+    entropy sum between the out- put and the label of all training samples in a batch.
+    BPTT is carried out using Adam with a learning rate of 0.001 as the optimizer. The batch size is set to 16 throughout the whole training process.
     All weights are initialized by using the Glorot normal initializer."""
 
-
-    # https://www.tensorflow.org/tutorials/text/text_classification_rnn <--- should we try this instead?
     model = tf.keras.models.Sequential()
-    model.add(tf.keras.layers.Embedding(input_dim=1781, output_dim=128, input_length=635)) #output should be (batch_size, input length, output_dim). number of words cannot exceed 1780
-    # The output of GRU will be a 3D tensor of shape (batch_size, timesteps, 128)
-    model.add(tf.keras.layers.Bidirectional(tf.keras.layers.GRU(128, activation="relu", kernel_initializer='glorot_normal', recurrent_activation="sigmoid", return_sequences=True)))
-    model.add(tf.keras.layers.Dense(64, use_bias=True,))
-    model.add(tf.keras.layers.Dense(1, use_bias=True,))
-    model.add(tf.keras.layers.Activation('sigmoid'))
+
+    # if given a pretrained embedding
+    if embedding_layer:
+        model.add(embedding_layer)
+    # else use new embedding
+    else:
+        model.add(tf.keras.layers.Embedding(input_dim=1701, output_dim=256, input_length=552))
+
+    model.add(tf.keras.layers.Bidirectional(tf.keras.layers.GRU(256, activation="tanh")))
+    model.add(tf.keras.layers.Dense(512,activation="relu"))
+    model.add(tf.keras.layers.Dropout(0.15, noise_shape=None, seed=None))
+    model.add(tf.keras.layers.Dense(256,activation="relu"))
+    model.add(tf.keras.layers.Dropout(0.15, noise_shape=None, seed=None))
+    model.add(tf.keras.layers.Dense(128,activation="relu"))
+    model.add(tf.keras.layers.Dropout(0.2, noise_shape=None, seed=None))
+    model.add(tf.keras.layers.Dense(2))
+    model.add(tf.keras.layers.Softmax())
     model.compile(
-        loss=tf.keras.losses.BinaryCrossentropy(reduction=tf.keras.losses.Reduction.SUM,), #https://keras.io/api/losses/probabilistic_losses/#binarycrossentropy-class
-        optimizer=tf.keras.optimizers.SGD(learning_rate=0.0001,),
-        metrics=[tf.keras.metrics.BinaryAccuracy()],)
-    model.summary()
->>>>>>> f0f7a82... ushas tuning
+        loss=tf.keras.losses.CategoricalCrossentropy(),
+        optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
+        metrics=[tf.keras.metrics.CategoricalAccuracy()])
     return model
 
-def train(model, train_ids, train_labels)):
-    """
-	Runs through one epoch - all training examples.
 
-	:param model: the initialized model to use for forward and backward pass
-	:param train_ids:  train data (all data for training) of shape (num_sentences, maxlen)
-	:param train_labels: train labels (all data for training) of shape (num_sentences, 1); label is 0 if control, 1 if dementia patient
-	:return: None
-	"""
-    # can mask some words if results are not goood enough
-    pass
-
-def test(model, test_ids, test_labels):
+def ten_sample():
+    """ This method runs the model with cross validation. Ten samples will be used for testing and
+    the rest for training each round. This is an alternative to how the model is run in main().
     """
-    Runs through one epoch - all testing examples.
+    f = open("data.txt", "a")
+    for i in range(0, 10):
+        print(str(i))
+        f.write("Run :" + str(i) + "\n")
+        data_ids, labels, vocab_dict, cons_ids, cons_labels = get_data()
+        labels=tf.one_hot(labels, 2)
+        train_ids = data_ids[:446, :]
+        train_labels = labels[:446]
+        test_ids = data_ids[446:, :]
+        test_labels = labels[446:]
 
-    :param model: the initialized model to use for forward and backward pass
-	:param test_ids:  train data (all data for training) of shape (num_sentences, maxlen)
-	:param test_labels: train labels (all data for training) of shape (num_sentences, 1); label is 0 if control, 1 if dementia patient
-    :returns: a tuple containing at index 0 the perplexity of the test set and at index 1 the per symbol accuracy on test set,
-    e.g. (my_perplexity, my_accuracy)
-    """
-    pass
+        # training embeddings on only control data
+        embedding_layer = train_embedding(cons_ids, cons_labels)
+
+        #training embeddings on GLOVE embeddings
+        embedding_index = glove_data()
+        glove_layer = glove_embedding(vocab_dict, embedding_index)
+
+        model = build_model(glove_layer)
+
+        train_results = model.fit(train_ids, train_labels, shuffle=True, epochs=10, batch_size=100)
+        loss_history = train_results.history["loss"]
+        comma = ", "
+        print(loss_history)
+        print(comma.join(map(str, loss_history)))
+        acc_history = train_results.history["categorical_accuracy"]
+
+        f.write("\t Losses: ")
+        f.write(comma.join(map(str,loss_history)))
+        f.write("\n\t Accuracies: ")
+        f.write(comma.join(map(str,acc_history)))
+        test_results = model.evaluate(test_ids, test_labels, batch_size=16)
+        f.write("\n\t Test Results: ")
+        f.write(comma.join(map(str,test_results)))
+        f.write("\n")
+
+    f.close()
+
 
 def main():
-    data_ids, labels, vocab_dict=get_data()
+    # Use ten_sample() instead of the rest of main to perform cross validation
+    # ten_sample()
+
+    # otherwise this will just use 85-15 train-test split
+    data_ids, labels, vocab_dict, cons_ids, cons_labels = get_data()
+    labels=tf.one_hot(labels, 2)
 
     # 85% is training data, 15% is test data
-<<<<<<< HEAD
-    train_ids=data_ids[:470, :]
-    train_labels=labels[:470]
-    test_ids=data_ids[470:, :]
-    test_labels=labels[470:]
-=======
-    train_ids = data_ids[:470, :]
-    train_labels = labels[:470]
-    test_ids = data_ids[470:, :]
-    test_labels = labels[470:]
+    train_ids = data_ids[:446, :]
+    train_labels = labels[:446]
+    test_ids = data_ids[446:, :]
+    test_labels = labels[446:]
 
-    print(train_ids.shape)
+    # these are used for the validation set
     train_val = train_ids[-70:]
     label_val = train_labels[-70:]
-    # train_ids = train_ids[:-70]
-    # train_labels = train_labels[:-70]
->>>>>>> f0f7a82... ushas tuning
 
-    model = build_model()
-<<<<<<< HEAD
-    
-=======
+    # first train embeddings on control data
+    embedding_layer = train_embedding(cons_ids, cons_labels)
+    # OR train embeddings on GLOVE data
+    embedding_index = glove_data()
+    glove_layer = glove_embedding(vocab_dict, embedding_index)
 
-    # train the model for 2 epochs
-    # train_results = model.fit(train_ids, train_labels, validation_data=(train_val, label_val), epochs=10, batch_size=16)
-    train_results = model.fit(train_ids, train_labels, shuffle=True, epochs=10, batch_size=64)
+    # build the model
+    model = build_model(None)
 
-    # model.train(model, train_ids, train_labels)
+    # train the model for 10 epochs
+    train_results = model.fit(train_ids, train_labels, shuffle=True, epochs=10, batch_size=100)
 
     #test model
     print("Evaluate on test data")
-    test_results = model.evaluate(test_ids, test_labels, batch_size=64)
+    test_results = model.evaluate(test_ids, test_labels, batch_size=16)
     print("test loss, test acc:", test_results)
-
-    # Generate predictions (probabilities -- the output of the last layer)
-    # on new data using `predict`
-    print("Generate predictions for 3 samples")
-    predictions = model.predict(test_ids[:3])
-    print("predictions shape:", predictions.shape)
->>>>>>> f0f7a82... ushas tuning
 
 if __name__ == "__main__":
     main()
