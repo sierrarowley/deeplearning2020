@@ -41,6 +41,14 @@ def split_word(word):
     """
     split_list = []
     end_car = False
+
+    # remove parentheses in words
+    # par = False
+    # if ("(" in word) or (")" in word):
+    #     word.replace("(", "")
+    #     word.replace(")", "")
+    #     par = True
+
     # turn numbers into num token
     if word.isdigit():
         return["<NUM>"]
@@ -63,13 +71,40 @@ def split_word(word):
     if word[-1] == ">":
         word = word[:-1]
         end_car = True
+        
+    # conj = None
     # if word[-5:] == "in(g)":
-    #     word = word[:-5] + "ing"
-    # if "'s" in word:
-    #     word = word.replace("'s", "")
+    #     conj = "ing"
+    #     word = word[:-5] 
+
+    # if word[-3:] == "ing":
+    #     conj = "ing"
+    #     word = word[:-3] 
+        
+    # if word[-2:] == "ed":
+    #     conj = "ed"
+    #     word = word[:-2] 
+
+    # poss = None
+    # if word[-2:] == "'s":
+    #     poss = "'s"
+    #     word = word[:-2]
+
 
     # add rest of word to list after splitting
     split_list.append(word)
+
+
+    # if conj != None:
+    #     split_list.append(conj)
+
+    # if poss != None:
+    #     split_list.append(poss)
+
+    # if par:
+    #     split_list.append("()")
+
+    
     # add end carrot to end of list
     if end_car:
         split_list.append(">")
