@@ -34,7 +34,14 @@ def read_con_files():
 
 def split_word(word):
     """
-    This method deals with splitting certain symbols from the words they are connected to. Specifically it will turn a number into the token <NUM>, it will turn <word> into [<, word, >], and it will split the & symbol off the front of words. The "< >" symbols represent a person speaking over another person. By separating these characters from their words, we can just treat the appearance of a < > character as its own embedding instead of giving each "<word>" a separate embedding from "word". The & symbol represents fillers, phonological fragments, and repeated segments. We separate these from their word for the same reason as < > (to not keep creating new embeddings).
+    This method deals with splitting certain symbols from the words they are connected to.
+    Specifically it will turn a number into the token <NUM>, it will turn <word> into [<, word, >],
+    and it will split the & symbol off the front of words. The "< >" symbols represent a person
+    speaking over another person. By separating these characters from their words, we can just
+    treat the appearance of a < > character as its own embedding instead of giving each "<word>" a
+    separate embedding from "word". The & symbol represents fillers, phonological fragments, and
+    repeated segments. We separate these from their word for the same reason as < > (to not keep
+    creating new embeddings).
 
     :param word: a word in a patient line
     :return: a list of the parts of the word after splitting
@@ -113,7 +120,10 @@ def split_word(word):
 
 def parse_lines(lines):
     """
-    This method takes all the lines in a file and parses it so that only the patients speech is included. It removes unwanted characters from words in the file (due to the files already being preprocessed by the owner of the data). It also removes the timestamp and post codes that are found at the end of the patients speaking lines in the transcripts.
+    This method takes all the lines in a file and parses it so that only the patients speech is
+    included. It removes unwanted characters from words in the file (due to the files already being
+    preprocessed by the owner of the data). It also removes the timestamp and post codes that are
+    found at the end of the patients speaking lines in the transcripts.
 
     :param lines: all of the lines in a file
     :return: a list of words in the file that represent the patient speaking
@@ -157,7 +167,10 @@ def parse_lines(lines):
 
 def get_data():
     """
-    This method creates data ready for the model. It gets all the patient lines from the files, tokenizes the data and UNKs using keras text preprocessing, and pads the sequences with -1 so each line is the same length using keras sequence preprocessing. Lastly, creates the labels and combines the dementia and control data into one array.
+    This method creates data ready for the model. It gets all the patient lines from the files,
+    tokenizes the data and UNKs using keras text preprocessing, and pads the sequences with -1 so
+    each line is the same length using keras sequence preprocessing. Lastly, creates the labels and
+    combines the dementia and control data into one array.
 
     :param: None
     :return: numpy array of data ids, numpy array of corresponding labels, vocab dictionary
