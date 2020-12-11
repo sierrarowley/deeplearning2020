@@ -31,7 +31,6 @@ def read_con_files():
         cha_file.close()
     return cons
 
-
 def split_word(word):
     """
     This method deals with splitting certain symbols from the words they are connected to.
@@ -43,18 +42,13 @@ def split_word(word):
     repeated segments. We separate these from their word for the same reason as < > (to not keep
     creating new embeddings).
 
+    MEANING OF CERTAIN SYMBOLS:
+    // : pause;
     :param word: a word in a patient line
     :return: a list of the parts of the word after splitting
     """
     split_list = []
     end_car = False
-
-    # remove parentheses in words
-    # par = False
-    # if ("(" in word) or (")" in word):
-    #     word.replace("(", "")
-    #     word.replace(")", "")
-    #     par = True
 
     # turn numbers into num token
     if word.isdigit():
@@ -68,8 +62,8 @@ def split_word(word):
             return split_list
     # separate & from word so & will have own embedding
     if word[0] == "&":
-        # &um and &uh are common words so keep them as is
-        if (word != "&um") and (word != "&uh"):
+        # &um and &uh are common words so keep them as is, &= represents something else
+        if (word != "&um") and (word != "&uh") and ("&=" not in word):
             split_list.append("&")
             word = word[1:]
         # if & is only charater in word, return
@@ -78,43 +72,41 @@ def split_word(word):
     if word[-1] == ">":
         word = word[:-1]
         end_car = True
+    # @u marks babbling so just keep the symbol and delete the babbling sound
+    if "@u" in word:
+        word = "@u"
+    # strip () from words but keep it for specific pause symbols. () will be treated as own symbol meaning word was shortened
+    par = False
+    if ("(" in word or ")" in word) and not (word == "(.)" or word == "(..)" or word == "(...)"):
+        word = word.replace("(", "")
+        word = word.replace(")", "")
+        par = True
 
     conj = None
-    # if word[-5:] == "in(g)":
-    #     conj = "ing"
-    #     word = word[:-5]
-
     if word[-3:] == "ing":
         conj = "ing"
         word = word[:-3]
-
     if word[-2:] == "ed":
         conj = "ed"
         word = word[:-2]
-
     poss = None
     if word[-2:] == "'s":
         poss = "'s"
         word = word[:-2]
 
-
     # add rest of word to list after splitting
     split_list.append(word)
 
-
     if conj != None:
         split_list.append(conj)
-
     if poss != None:
         split_list.append(poss)
-
-    # if par:
-    #     split_list.append("()")
-
-
+    if par:
+        split_list.append("()")
     # add end carrot to end of list
     if end_car:
         split_list.append(">")
+
     return split_list
 
 
@@ -134,7 +126,7 @@ def parse_lines(lines):
         if lines[i][0:5] == "*PAR:" or (lines[i][0:1] == "\t" and lines[i-1][0:5] == "*PAR:"):
             line = lines[i]
             # remove unwanted characters from the words
-            unwanted_characters = ["*PAR", ":", "+", "@", "(", ")", "]"]
+            unwanted_characters = ["*PAR", ":", "+", "[*]", "‡", "]", "\""]
             for ch in unwanted_characters:
                 line = line.replace(ch, "")
             new_line = line.split()
@@ -142,7 +134,7 @@ def parse_lines(lines):
             # since pat lines end with a timestamp and pat lines can take up multiple lines, check if line is last of pat lines and remove time stamp from the string
             if (i+1 < len(lines)) and ((lines[i+1][0:5] == "%mor:") or (lines[i+1][0:5] == "*PAR:")):
                 new_line = new_line[0:-1]
-            # idk what this is for usha pls explain
+            # some words in the files contain unicode characters, remove these
             elif (len(new_line[-1]) > 6) and ((new_line[-1][0:4] == "\x15") or ("0" in new_line[-1]) or (new_line[-1][0:3] == "\\u") or (new_line[-1][4].isdigit()) or (new_line[-1][0] == "_")):
                 new_line = new_line[0:-1]
 
@@ -155,11 +147,24 @@ def parse_lines(lines):
             # split on spaces
             new_line = new_line.split()
 
-            # [+ is the first character in a post code in the patient line, we don't want to include these so only copy words up to this character
             end_line = []
-            for word in new_line:
-                if word != "[+":
-                    end_line += split_word(word)
+            # for word in new_line:
+            for i in range(len(new_line)-1):
+                # [* marks an error by the transcriber followed by that error. We don't want to include this becuase it is not relevant to the patient
+                if new_line[i] == "[*" or "[*" in new_line[i]:
+                    # remove rest of error bit
+                    new_line.pop(i+1)
+                    # add this check since we are changing the length of the list by removing things
+                    if i == len(new_line)-1:
+                        break
+                    # dont add "[*" to line
+                    continue
+                # [+ is the first character in a post code in the patient line, we don't want to include these so only copy words up to this character
+                if new_line[i] != "[+":
+                    end_line += split_word(new_line[i])
+                # add this check since we are changing the length of the list by removing things
+                if i == len(new_line)-1:
+                    break
             # add parsed line to full list of patient lines
             pat_lines += end_line
     return pat_lines
@@ -181,14 +186,13 @@ def get_data():
 
     # Tokenize our data
     tokenizer = tf.keras.preprocessing.text.Tokenizer(
-        num_words=1780, oov_token='<UNK>')
+        num_words=1700, oov_token='<UNK>')
     tokenizer.fit_on_texts(dems)
     tokenizer.fit_on_texts(cons)
 
     # Encode data sentences into sequences
     dems_sequences = tokenizer.texts_to_sequences(dems)
     cons_sequences = tokenizer.texts_to_sequences(cons)
-    # print('tokenized dems', dems_sequences[0:10])
 
     # Get our vocab dictionary
     vocab_dict = tokenizer.word_index
@@ -200,21 +204,28 @@ def get_data():
 
     # Pad the dem sequences
     dems_padded = pad_sequences(
-        dems_sequences, padding='post', truncating='post', maxlen=maxlen, value=-1)
+        dems_sequences, padding='post', truncating='post', maxlen=maxlen, value=0)
     # Pad the con sequences
     cons_padded = pad_sequences(
-        cons_sequences, padding='post', truncating='post', maxlen=maxlen, value=-1)
+        cons_sequences, padding='post', truncating='post', maxlen=maxlen, value=0)
 
     # create the labels
     dem_labels = np.full((dems_padded.shape[0]), 1)
     con_labels = np.full((cons_padded.shape[0]), 0)
+    dem_size = dem_labels.shape[0]
+    con_size = con_labels.shape[0]
+
+    dems_padded = dems_padded[0:con_size]
+    dem_labels = dem_labels[0:con_size]
+
     # concatenate dementia and control data together
+    cons_tot = np.concatenate((cons_padded, np.expand_dims(con_labels, axis=1)), axis=1)
+    np.random.shuffle(cons_tot)
     data_ids = np.concatenate((dems_padded, cons_padded), axis=0)
     labels = np.concatenate((dem_labels, con_labels), axis=0)
     # shuffle so that dementia and control patients are mixed
     total = np.concatenate((data_ids, np.expand_dims(labels, axis=1)), axis=1)
-    # print('ids', data_ids)
     np.random.shuffle(total)
 
-    # return data ids, labels, and vocab dictionary
-    return (total[:, :-1], total[:, -1], vocab_dict)
+    # return data ids, labels, vocab dictionary, controlled ids, controlled labels
+    return (total[:, :-1], total[:, -1], vocab_dict, cons_tot[:, :-1], cons_tot[:, -1])
